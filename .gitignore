@@ -1,0 +1,6 @@
+bin/
+mybot.jar
+game_logs/
+.classpath
+.project
+.settings/
