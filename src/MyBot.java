@@ -13,6 +13,7 @@ import java.util.Set;
  */
 public class MyBot extends Bot {
 	
+	HashMap<Tile, Aim> antDirections = new HashMap<Tile, Aim>();
 	
     /**
      * Main method executed by the game engine for starting the bot.
@@ -98,9 +99,14 @@ public class MyBot extends Bot {
 		List<Aim> aims = Arrays.asList(Aim.values());
         for (Tile myAnt : ants.getMyAnts()) {
         	if (!orders.containsValue(myAnt)) {
+        		Aim aim = antDirections.get(myAnt);
+        		if (aim != null && doMoveDirection(ants, orders, myAnt, aim)) {
+        			continue;
+        		}
+        		Collections.shuffle(aims);
 	            for (Aim direction : aims) {
 	                if (doMoveDirection(ants, orders, myAnt, direction)) {
-	        			//System.out.println("RANDOM MOVE: " + direction + " by ant " + myAnt);
+	        			//System.err.println("RANDOM MOVE: " + direction + " by ant " + myAnt);
 	                    break;
 	                }
 	            }
@@ -115,10 +121,12 @@ public class MyBot extends Bot {
     
     public boolean doMoveDirection(Ants ants, HashMap<Tile, Tile> orders, Tile antLoc, Aim direction) {
         // Track all moves, prevent collisions
-        Tile newLoc = ants.getTile(antLoc, direction);
+    	Tile newLoc = ants.getTile(antLoc, direction);
         if (!ants.getMyHills().contains(newLoc) && ants.getIlk(newLoc).isUnoccupied() && ants.getIlk(newLoc).isPassable() && !orders.containsValue(newLoc) && !orders.containsKey(antLoc)) {
             ants.issueOrder(antLoc, direction);
             orders.put(antLoc, newLoc);
+            antDirections.remove(antLoc);
+            antDirections.put(newLoc, direction);
             return true;
         } else {
             return false;
@@ -167,7 +175,7 @@ public class MyBot extends Bot {
     	   			if (neighborNode != null && cheapest.steps < neighborNode.steps - 1) {
         				neighborNode.steps = cheapest.steps + 1;
         				neighborNode.parent = cheapest;
-        			} else {
+        			} else if (neighborNode == null){
         				PathNode next = new PathNode(cheapest, neighbor, cheapest.steps + 1, ants.getDistance(neighbor, destination));
         				open.add(next);
         				openMap.put(next.tile, next);

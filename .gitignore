@@ -4,3 +4,4 @@ game_logs/
 .classpath
 .project
 .settings/
+.DS_Store
