@@ -46,6 +46,7 @@ public class Ant {
 		};
 		
 	}
+
 	
 	public boolean moveInPreferredDirection(HashMap<Tile, Tile> orders) {
 		//System.err.println("Tile " + tile + ", Prefer " + preferredDirection + ", current " + currentDirection + ", turns " + turnCount);
@@ -101,7 +102,12 @@ public class Ant {
         // Track all moves, prevent collisions
     	Tile newLoc = ants.getTile(this.tile, direction);
     	//System.err.println("Attempting to move tile " + this.tile);
-        if ((ants.getMyAnts().size() == 1 || !ants.getMyHills().contains(newLoc)) && ants.getIlk(newLoc).isUnoccupied() && ants.getIlk(newLoc).isPassable() && !orders.containsValue(newLoc) && !orders.containsKey(this.tile)) {
+    	if (!ants.getIlk(newLoc).isUnoccupied()) {
+    		if (ants.getIlk(newLoc).equals(Ilk.MY_ANT)) {
+    			return false;
+    		}
+    	}
+        if ((ants.getMyAnts().size() == 1 || !ants.getMyHills().contains(newLoc)) && ants.getIlk(newLoc).isPassable() && !orders.containsValue(newLoc) && !orders.containsKey(this.tile)) {
             ants.issueOrder(this.tile, direction);
             orders.put(this.tile, newLoc);
             this.order = newLoc;
