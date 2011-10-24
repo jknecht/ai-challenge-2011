@@ -12,8 +12,8 @@ import java.util.Set;
  * Starter bot implementation.
  */
 public class MyBot extends Bot {
-	
-	HashMap<Tile, Aim> antDirections = new HashMap<Tile, Aim>();
+	HashSet<Tile> knownEnemyHills = new HashSet<Tile>();
+	HashMap<Tile, Ant> myAnts = new HashMap<Tile, Ant>();
 	
     /**
      * Main method executed by the game engine for starting the bot.
@@ -36,187 +36,117 @@ public class MyBot extends Bot {
     @Override
     public void doTurn() {
     	Ants ants = getAnts();
-    	HashMap<Tile, Tile> orders = new HashMap<Tile, Tile>(50);
+    	ArrayList<Ant> antsWithoutOrders = new ArrayList<Ant>();
+    	Set<Tile> antTiles = ants.getMyAnts();
+    	
+    	//clear the dead ants
+    	Set<Tile> deadAnts = new HashSet<Tile>();
+    	for (Tile antTile : myAnts.keySet()) {
+    		if (!antTiles.contains(antTile)) {
+    			deadAnts.add(antTile);
+    		}
+    	}
+    	for (Tile dead : deadAnts) {
+    		myAnts.remove(dead);
+    	}
+    	
+    	//add any new ants and populate antsWithoutOrders list
+    	for (Tile antTile : antTiles) {
+    		Ant ant = myAnts.get(antTile);
+    		if (ant == null) {
+    			ant = new Ant(ants, antTile);
+    			myAnts.put(antTile, ant);
+    		}
+    		antsWithoutOrders.add(ant);
+    	}
+    	
+    	
+    	HashMap<Tile, Tile> orders = new HashMap<Tile, Tile>(myAnts.size());
+    	
+    	
+    	knownEnemyHills.addAll(ants.getEnemyHills());
+    	Set<Tile> occupiedHills = new HashSet<Tile>();
+    	for (Tile hill : knownEnemyHills) {
+    		Ant occupyingForce = myAnts.get(hill);
+    		occupiedHills.add(hill);
+    		if (occupyingForce != null) {
+    			antsWithoutOrders.remove(occupyingForce);
+    		}
+    	}
+    	
     	
     	
     	// find food
-    	ArrayList<AntDistance> distancesFromFood = new ArrayList<AntDistance>();
-    	HashSet<Tile> targetedFood = new HashSet<Tile>();
-    	
     	for (Tile food : ants.getFoodTiles()) {
-    		for (Tile ant : ants.getMyAnts()) {
-    			distancesFromFood.add(new AntDistance(ants.getDistance(ant, food), ant, food));
-    		}
-    	}
-    	Collections.sort(distancesFromFood);
-    	for (AntDistance distance : distancesFromFood) {
-    		if (!orders.containsKey(distance.ant) && !targetedFood.contains(distance.destination) && doMoveLocation(ants, orders, distance.ant, distance.destination, "food")) {
-    			targetedFood.add(distance.destination);
+    		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, food));
+    		for (Ant closest : antsWithoutOrders) {
+    			closest.setDestination(food);
+	    		if (closest.move(orders)) {
+	    			antsWithoutOrders.remove(closest);
+	    			break;
+	    		}
     		}
     	}
 
-    	// find enemy hills
-    	ArrayList<AntDistance> distancesFromHills = new ArrayList<AntDistance>();
-    	HashSet<Tile> targetedHills = new HashSet<Tile>();
     	
-    	for (Tile hill : ants.getEnemyAnts()) {
-    		for (Tile ant : ants.getMyAnts()) {
-    			distancesFromHills.add(new AntDistance(ants.getDistance(ant, hill), ant, hill));
+    	// find enemy hills
+    	HashSet<Ant> hillAttackers = new HashSet<Ant>();
+    	for (Tile hill : knownEnemyHills) {
+    		if (occupiedHills.contains(hill)) {
+    			continue;
+    		}
+    		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, hill));
+    		for (int i = 0; i < antsWithoutOrders.size() / knownEnemyHills.size(); i++) {
+    			Ant closest = antsWithoutOrders.get(i);
+    			closest.setDestination(hill);
+        		if (closest.move(orders)) {
+        			hillAttackers.add(closest);
+	    		}
     		}
     	}
-    	Collections.sort(distancesFromHills);
-    	//System.out.println("Hill identified: " + distancesFromHills.size());
-    	for (AntDistance distance : distancesFromHills) {
-    		if (!orders.containsKey(distance.ant) && doMoveLocation(ants, orders, distance.ant, distance.destination, "enemy hill")) {
-    			//System.out.println("HILL TARGETED: " + distance.destination + " by ant " + distance.ant);
-    			targetedHills.add(distance.destination);
-    		}
-    	}
+    	antsWithoutOrders.removeAll(hillAttackers);
 
     	
     	// find enemies
-    	ArrayList<AntDistance> distancesFromEnemies = new ArrayList<AntDistance>(50);
-    	HashSet<Tile> targetedEnemies = new HashSet<Tile>(50);
-    	
     	for (Tile enemy : ants.getEnemyAnts()) {
-    		for (Tile ant : ants.getMyAnts()) {
-    			distancesFromEnemies.add(new AntDistance(ants.getDistance(ant, enemy), ant, enemy));
-    		}
-    	}
-    	Collections.sort(distancesFromEnemies);
-    	//System.out.println("Enemies identified: " + distancesFromEnemies.size());
-    	for (AntDistance distance : distancesFromEnemies) {
-    		if (!orders.containsKey(distance.ant)) {
-    			if (doMoveLocation(ants, orders, distance.ant, distance.destination, "enemy")) {
-//        			//System.out.println("ENEMY TARGETED: " + distance.destination + " by ant " + distance.ant);
-        			targetedEnemies.add(distance.destination);
-    			}
+    		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, enemy));
+    		for (Ant closest : antsWithoutOrders) {
+    			closest.setDestination(enemy);
+        		if (closest.move(orders)) {
+	    			antsWithoutOrders.remove(closest);
+	    			break;
+	    		}
     		}
     	}
     
     	
-    	
-		List<Aim> aims = Arrays.asList(Aim.values());
-        for (Tile myAnt : ants.getMyAnts()) {
-        	if (!orders.containsValue(myAnt)) {
-        		Aim aim = antDirections.get(myAnt);
-        		if (aim != null && doMoveDirection(ants, orders, myAnt, aim)) {
-        			continue;
-        		}
-        		Collections.shuffle(aims);
-	            for (Aim direction : aims) {
-	                if (doMoveDirection(ants, orders, myAnt, direction)) {
-	        			//System.err.println("RANDOM MOVE: " + direction + " by ant " + myAnt);
-	                    break;
-	                }
-	            }
+    	// if there was a destination set, then continue toward that destination
+    	HashSet<Ant> onAPath = new HashSet<Ant>();
+        for (Ant ant : antsWithoutOrders) {
+        	if (ant.destination != null && ant.move(orders)) {
+        		onAPath.add(ant);
         	}
         }
-        
-        
-
-    }
-    
-    
-    
-    public boolean doMoveDirection(Ants ants, HashMap<Tile, Tile> orders, Tile antLoc, Aim direction) {
-        // Track all moves, prevent collisions
-    	Tile newLoc = ants.getTile(antLoc, direction);
-        if (!ants.getMyHills().contains(newLoc) && ants.getIlk(newLoc).isUnoccupied() && ants.getIlk(newLoc).isPassable() && !orders.containsValue(newLoc) && !orders.containsKey(antLoc)) {
-            ants.issueOrder(antLoc, direction);
-            orders.put(antLoc, newLoc);
-            antDirections.remove(antLoc);
-            antDirections.put(newLoc, direction);
-            return true;
-        } else {
-            return false;
+        antsWithoutOrders.removeAll(onAPath);
+    	
+    	
+        for (Ant ant : antsWithoutOrders) {
+        	ant.moveInPreferredDirection(orders);
         }
+        
+        //update the position of my ants
+        HashMap<Tile, Ant> newPositions = new HashMap<Tile, Ant>();
+        for (Tile key : myAnts.keySet()) {
+        	Ant ant = myAnts.get(key);
+        	if (ant.order != null) {
+        		ant.tile = ant.order;
+        		ant.order = null;
+        	}
+    		newPositions.put(ant.tile, ant);
+        }
+        myAnts = newPositions;
     }
-
-    public boolean doMoveLocation(Ants ants, HashMap<Tile, Tile> orders, Tile ant, Tile destination, String why) {
-    	//System.out.println("Moving from " + ant + " to " + destination + " for " + why);
-    	List<PathNode> open = new ArrayList<PathNode>();
-    	HashMap<Tile, PathNode> openMap = new HashMap<Tile, PathNode>();
-    	PathNode start = new PathNode(null, ant, 0, ants.getDistance(ant, destination));
-    	open.add(start);
-    	openMap.put(start.tile, start);
-    	
-    	HashMap<Tile, PathNode> closed = new HashMap<Tile, PathNode>();
-    	
-    	while(open.size() > 0) {
-    		Collections.sort(open);
-    		PathNode cheapest = open.get(0);
-    		if (cheapest.tile.equals(destination)) {
-    			//List<PathNode> path = cheapest.getFullPath();
-    			//Tile firstTile = path.size() == 1 ? path.get(0).tile : path.get(1).tile;
-    			Tile firstTile = cheapest.getFirstTileInPath();
-    			//System.out.println("Getting directions from " + ant + " to " + firstTile);
-    	    	List<Aim> directions = ants.getDirections(ant, firstTile);
-    	    	for (Aim dir : directions) {
-    	        	if (doMoveDirection(ants, orders, ant, dir)) {
-    	        		return true;
-    	        	}
-    	    	}
-    	    	return false;    			
-    		}
-    		
-    		open.remove(0);
-    		openMap.remove(cheapest.tile);
-    		closed.put(cheapest.tile, cheapest);
-    		List<Tile> neighbors = getNeighbors(cheapest.tile);
-    		for (Tile neighbor : neighbors) {
-    			PathNode neighborNode = closed.get(neighbor); 
-    			boolean inClosed = (neighborNode != null);
-	   			if (neighborNode != null && cheapest.steps < neighborNode.steps - 1) {
-    				neighborNode.steps = cheapest.steps + 1;
-    				neighborNode.parent = cheapest;
-    			} else if (!inClosed) {
-    				neighborNode = openMap.get(neighbor);
-    	   			if (neighborNode != null && cheapest.steps < neighborNode.steps - 1) {
-        				neighborNode.steps = cheapest.steps + 1;
-        				neighborNode.parent = cheapest;
-        			} else if (neighborNode == null){
-        				PathNode next = new PathNode(cheapest, neighbor, cheapest.steps + 1, ants.getDistance(neighbor, destination));
-        				open.add(next);
-        				openMap.put(next.tile, next);
-        			}   				
-    			}
-    		}
-    	}
-    	return false;
-    }
-
+    
             		
-    private PathNode find(List<PathNode> nodes, Tile tile) {
-    	for (PathNode node : nodes) {
-    		if (node.tile.equals(tile)) {
-    			return node;
-    		}
-    	}
-    	return null;
-    }
-    
-    private List<Tile> getNeighbors(Tile tile) {
-    	ArrayList<Tile> neighbors = new ArrayList<Tile>();
-    	Ants ants = getAnts();
-    	for (Aim aim : Aim.values()) {
-    		Tile neighbor = ants.getTile(tile, aim);
-    		if (ants.getIlk(neighbor).isPassable()) {
-    			neighbors.add(neighbor);
-    		}
-    	}
-    	return neighbors;
-    }
-    
-    public boolean doMoveLocationSimple(Ants ants, HashMap<Tile, Tile> orders, Tile ant, Tile destination, String why) {
-    	List<Aim> directions = ants.getDirections(ant, destination);
-    	for (Aim dir : directions) {
-        	if (doMoveDirection(ants, orders, ant, dir)) {
-        		return true;
-        	}
-    	}
-    	return false;
-    }
-
     
 }

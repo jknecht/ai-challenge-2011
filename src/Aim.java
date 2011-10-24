@@ -75,4 +75,31 @@ public enum Aim {
     public static Aim fromSymbol(char symbol) {
         return symbolLookup.get(symbol);
     }
+    
+    public Aim leftTurn() {
+    	switch(this) {
+    	case NORTH:
+    		return WEST;
+    	case WEST:
+    		return SOUTH;
+    	case SOUTH:
+    		return EAST;
+    	default:
+    		return NORTH;	
+    	}
+    }
+    
+    public Aim rightTurn() {
+    	switch(this) {
+    	case NORTH:
+    		return EAST;
+    	case WEST:
+    		return NORTH;
+    	case SOUTH:
+    		return WEST;
+    	default:
+    		return SOUTH;	
+    	}
+    }
+
 }
