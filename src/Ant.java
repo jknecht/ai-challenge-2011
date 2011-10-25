@@ -109,7 +109,7 @@ public class Ant {
 	}
 
 	public boolean moveToPreferredTile(HashMap<Tile, Tile> orders) {
-		if (ants.getIlk(preferredTarget).equals(Ilk.WATER) || ants.getDistance(this.tile, this.preferredTarget) <= ants.getViewRadius2()) {
+		if (preferredTarget == null || ants.getIlk(preferredTarget).equals(Ilk.WATER) || ants.getDistance(this.tile, this.preferredTarget) <= ants.getViewRadius2()) {
 			pickPreferredTarget();
 		}
 		this.destination = preferredTarget;
