@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,12 +47,30 @@ public class Ant {
 				continue;
 			}
 			PathNode path = getPathTo(food);
-			if (path != null && closestFood == null || path.totalCost < distance) {
+			if (path != null && (closestFood == null || path.totalCost < distance)) {
 				closestFood = food;
 				distance = path.totalCost;
 			}
 		}
 		return closestFood;
+	}
+	
+	public Tile closestVisible(Collection<Tile> tiles) {
+		Tile closest = null;
+		int distance = 0;
+		for (Tile potential : tiles) {
+			int foodDistance = ants.getDistance(this.tile, potential);
+			if (foodDistance >= ants.getViewRadius2()) {
+				continue;
+			}
+			PathNode path = getPathTo(potential);
+			if (path != null && (closest == null || path.totalCost < distance)) {
+				closest = potential;
+				distance = path.totalCost;
+			}
+		}
+		return closest;
+		
 	}
 	
 	@Override
