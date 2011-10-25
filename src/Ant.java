@@ -132,22 +132,22 @@ public class Ant {
 		
 	}
 
-	public boolean moveToPreferredTile(HashMap<Tile, Tile> orders) {
+	public boolean moveToPreferredTile() {
 		if (preferredTarget == null || ants.getIlk(preferredTarget).equals(Ilk.WATER) || ants.getDistance(this.tile, this.preferredTarget) <= ants.getViewRadius2()) {
 			pickPreferredTarget();
 		}
 		this.destination = preferredTarget;
-		return this.move(orders);
+		return this.move();
 	}
 	
-	public boolean moveInPreferredDirection(HashMap<Tile, Tile> orders) {
+	public boolean moveInPreferredDirection() {
 		//System.err.println("Tile " + tile + ", Prefer " + preferredDirection + ", current " + currentDirection + ", turns " + turnCount);
 		this.destination = null;
 		if (currentDirection == null) {
 			currentDirection = preferredDirection;
 		}
 		if (currentDirection.equals(preferredDirection) && turnCount == 0) {
-			if (move(orders, currentDirection)) {
+			if (move(currentDirection)) {
 				return true;
 			} else {
 				for (int i = 0; i < 3; i++) {
@@ -157,7 +157,7 @@ public class Ant {
 						currentDirection = currentDirection.leftTurn();
 					}
 					turnCount++;
-					if (move(orders, currentDirection)) {
+					if (move(currentDirection)) {
 						return true;
 					}
 				}
@@ -170,7 +170,7 @@ public class Ant {
 				currentDirection = currentDirection.rightTurn();
 			}
 			turnCount--;
-			if (move(orders, currentDirection)) {
+			if (move(currentDirection)) {
 				return true;
 			} else {
 				for (int i = 0; i < 3; i++) {
@@ -180,7 +180,7 @@ public class Ant {
 						currentDirection = currentDirection.leftTurn();
 					}
 					turnCount++;
-					if (move(orders, currentDirection)) {
+					if (move(currentDirection)) {
 						return true;
 					}
 				}
@@ -189,7 +189,7 @@ public class Ant {
 		return false;
 	}
 	
-    public boolean move(HashMap<Tile, Tile> orders, Aim direction) {
+    public boolean move(Aim direction) {
         // Track all moves, prevent collisions
     	Tile newLoc = ants.getTile(this.tile, direction);
     	//System.err.println("Attempting to move tile " + this.tile);
@@ -198,9 +198,8 @@ public class Ant {
     			direction = direction.rightTurn();
     		}
     	}
-        if ((ants.getMyAnts().size() == 1 || !ants.getMyHills().contains(newLoc)) && ants.getIlk(newLoc).isPassable() && !orders.containsValue(newLoc) && !orders.containsKey(this.tile)) {
+        if ((ants.getMyAnts().size() == 1 || !ants.getMyHills().contains(newLoc)) && ants.getIlk(newLoc).isPassable() && !ants.getOrders().contains(newLoc)) {
             ants.issueOrder(this.tile, direction);
-            orders.put(this.tile, newLoc);
             this.order = newLoc;
             return true;
         } else {
@@ -251,7 +250,7 @@ public class Ant {
     	
     }
     
-    public boolean move(HashMap<Tile, Tile> orders) {
+    public boolean move() {
     	//System.err.println("Moving " + tile + " toward " + destination);
     	PathNode path = getPathTo(this.destination);
     	if (path == null) {
@@ -261,7 +260,7 @@ public class Ant {
 
     	List<Aim> directions = ants.getDirections(this.tile, path.getFirstTileInPath());
     	for (Aim dir : directions) {
-        	if (move(orders, dir)) {
+        	if (move(dir)) {
             	return true;
         	}
     	}
