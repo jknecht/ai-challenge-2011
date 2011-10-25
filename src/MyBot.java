@@ -36,10 +36,13 @@ public class MyBot extends Bot {
     @Override
     public void doTurn() {
     	Ants ants = getAnts();
+    	
     	ArrayList<Ant> antsWithoutOrders = new ArrayList<Ant>();
+    	log("getting my ants");
     	Set<Tile> antTiles = ants.getMyAnts();
     	
     	//clear the dead ants
+    	log("clearing dead ants");
     	Set<Tile> deadAnts = new HashSet<Tile>();
     	for (Tile antTile : myAnts.keySet()) {
     		if (!antTiles.contains(antTile)) {
@@ -51,6 +54,7 @@ public class MyBot extends Bot {
     	}
     	
     	//add any new ants and populate antsWithoutOrders list
+    	log("adding new ants and populating antsWithoutOrders");
     	for (Tile antTile : antTiles) {
     		Ant ant = myAnts.get(antTile);
     		if (ant == null) {
@@ -64,17 +68,27 @@ public class MyBot extends Bot {
     	HashMap<Tile, Tile> orders = new HashMap<Tile, Tile>(myAnts.size());
     	
     	// find food
+    	log("hunting food");
     	for (Tile food : ants.getFoodTiles()) {
+    		log("sorting antsWithoutOrders by straightline distance to " + food);
     		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, food));
     		int n = antsWithoutOrders.size() >= 5 ? 5 : antsWithoutOrders.size();
+    		log("picking up to 5 closest ants...");
     		ArrayList<Ant> closeAnts = new ArrayList<Ant>();
     		for (int i = 0; i < n; i++) {
-    			closeAnts.add(antsWithoutOrders.get(i));
+    			Ant potential = antsWithoutOrders.get(i);
+    			//only include this ant if it can actually see the food
+    			if (ants.getDistance(potential.tile, food) <= ants.getViewRadius2()) {
+    				closeAnts.add(potential);
+    			}
     		}
+    		log("sorting closest ants by path distance to " + food);
     		Collections.sort(closeAnts, Ant.pathComparator(ants, food));
+    		log("iterating over closest ants...");
     		for (Ant closest : closeAnts) {
     			Tile closestFood = closest.closestFood();
     			if (closestFood != null && closestFood.equals(food)) {
+    				log("sending ant " + closest + " after food at " + food);
 	    			closest.setDestination(food);
 		    		if (closest.move(orders)) {
 		    			antsWithoutOrders.remove(closest);
@@ -85,6 +99,7 @@ public class MyBot extends Bot {
     	}
 
     	// find enemy hills
+    	log("hunting enemy hills");
     	HashSet<Ant> hillAttackers = new HashSet<Ant>();
     	for (Tile hill : ants.getEnemyHills()) {
     		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, hill));
@@ -98,9 +113,9 @@ public class MyBot extends Bot {
     	}
     	antsWithoutOrders.removeAll(hillAttackers);
 
-
     	
-//    	// find enemies
+    	
+    	// find enemies
 //    	for (Tile enemy : ants.getEnemyAnts()) {
 //    		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, enemy));
 //    		for (Ant closest : antsWithoutOrders) {
@@ -141,6 +156,10 @@ public class MyBot extends Bot {
         myAnts = newPositions;
     }
     
-            		
+            	
+    private void log(String msg) {
+    	if (Ant.debug)
+    		System.err.println(msg);
+    }
     
 }

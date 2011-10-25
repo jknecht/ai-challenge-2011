@@ -9,6 +9,7 @@ import java.util.Set;
 
 
 public class Ant {
+	public static boolean debug = false;
 	static final Random r = new Random(System.currentTimeMillis());
 	Ants ants;
 	Tile tile;
@@ -275,4 +276,8 @@ public class Ant {
     	return neighbors;
     }
 
+    private void log(String msg) {
+    	if (debug)
+    		System.err.println(msg);
+    }
 }
