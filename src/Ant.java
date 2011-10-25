@@ -38,6 +38,10 @@ public class Ant {
 		}
 	}
 	
+	public boolean isVisible(Tile target) {
+		return ants.getDistance(this.tile, target) <= ants.getViewRadius2();
+	}
+	
 	public Tile closestFood() {
 		Set<Tile> visibleFood = ants.getFoodTiles();
 		Tile closestFood = null;

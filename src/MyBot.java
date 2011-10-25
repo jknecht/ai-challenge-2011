@@ -66,6 +66,7 @@ public class MyBot extends Bot {
     	
     	
     	HashMap<Tile, Tile> orders = new HashMap<Tile, Tile>(myAnts.size());
+    	ArrayList<Ant> antsWithOrders = new ArrayList<Ant>();
     	
     	// find food
     	log("hunting food");
@@ -92,6 +93,7 @@ public class MyBot extends Bot {
 	    			closest.setDestination(food);
 		    		if (closest.move(orders)) {
 		    			antsWithoutOrders.remove(closest);
+		    			antsWithOrders.add(closest);
 		    			break;
 		    		}
     			}
@@ -100,18 +102,31 @@ public class MyBot extends Bot {
 
     	// find enemy hills
     	log("hunting enemy hills");
-    	HashSet<Ant> hillAttackers = new HashSet<Ant>();
     	for (Tile hill : ants.getEnemyHills()) {
     		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, hill));
-    		for (int i = 0; i < antsWithoutOrders.size() / ants.getEnemyHills().size(); i++) {
-    			Ant closest = antsWithoutOrders.get(i);
+    		int n = antsWithoutOrders.size() >= 5 ? 5 : antsWithoutOrders.size();
+    		log("picking up to 5 closest ants...");
+    		ArrayList<Ant> closeAnts = new ArrayList<Ant>();
+    		for (int i = 0; i < n; i++) {
+    			Ant potential = antsWithoutOrders.get(i);
+    			//only include this ant if it can actually see the food
+    			if (ants.getDistance(potential.tile, hill) <= ants.getViewRadius2()) {
+    				closeAnts.add(potential);
+    			}
+    		}
+    		log("sorting closest ants by path distance to " + hill);
+    		Collections.sort(closeAnts, Ant.pathComparator(ants, hill));
+    		log("iterating over closest ants...");
+    		for (Ant closest : closeAnts) {
+				log("sending ant " + closest + " after hill at " + hill);
     			closest.setDestination(hill);
-        		if (closest.move(orders)) {
-        			hillAttackers.add(closest);
+	    		if (closest.move(orders)) {
+	    			antsWithoutOrders.remove(closest);
+	    			antsWithOrders.add(closest);
+	    			break;
 	    		}
     		}
     	}
-    	antsWithoutOrders.removeAll(hillAttackers);
 
     	
     	
@@ -126,7 +141,8 @@ public class MyBot extends Bot {
 //	    		}
 //    		}
 //    	}
-    
+    	
+    	
     	
     	// if there was a destination set, then continue toward that destination
     	HashSet<Ant> onAPath = new HashSet<Ant>();
