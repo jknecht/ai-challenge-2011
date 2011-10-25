@@ -63,40 +63,32 @@ public class MyBot extends Bot {
     	
     	HashMap<Tile, Tile> orders = new HashMap<Tile, Tile>(myAnts.size());
     	
-    	
-    	knownEnemyHills.addAll(ants.getEnemyHills());
-    	Set<Tile> occupiedHills = new HashSet<Tile>();
-    	for (Tile hill : knownEnemyHills) {
-    		Ant occupyingForce = myAnts.get(hill);
-    		occupiedHills.add(hill);
-    		if (occupyingForce != null) {
-    			antsWithoutOrders.remove(occupyingForce);
-    		}
-    	}
-    	
-    	
-    	
     	// find food
     	for (Tile food : ants.getFoodTiles()) {
     		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, food));
-    		for (Ant closest : antsWithoutOrders) {
-    			closest.setDestination(food);
-	    		if (closest.move(orders)) {
-	    			antsWithoutOrders.remove(closest);
-	    			break;
-	    		}
+    		int n = antsWithoutOrders.size() >= 5 ? 5 : antsWithoutOrders.size();
+    		ArrayList<Ant> closeAnts = new ArrayList<Ant>();
+    		for (int i = 0; i < n; i++) {
+    			closeAnts.add(antsWithoutOrders.get(i));
+    		}
+    		Collections.sort(closeAnts, Ant.pathComparator(ants, food));
+    		for (Ant closest : closeAnts) {
+    			Tile closestFood = closest.closestFood();
+    			if (closestFood != null && closestFood.equals(food)) {
+	    			closest.setDestination(food);
+		    		if (closest.move(orders)) {
+		    			antsWithoutOrders.remove(closest);
+		    			break;
+		    		}
+    			}
     		}
     	}
 
-    	
     	// find enemy hills
     	HashSet<Ant> hillAttackers = new HashSet<Ant>();
-    	for (Tile hill : knownEnemyHills) {
-    		if (occupiedHills.contains(hill)) {
-    			continue;
-    		}
+    	for (Tile hill : ants.getEnemyHills()) {
     		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, hill));
-    		for (int i = 0; i < antsWithoutOrders.size() / knownEnemyHills.size(); i++) {
+    		for (int i = 0; i < antsWithoutOrders.size() / ants.getEnemyHills().size(); i++) {
     			Ant closest = antsWithoutOrders.get(i);
     			closest.setDestination(hill);
         		if (closest.move(orders)) {
@@ -106,18 +98,19 @@ public class MyBot extends Bot {
     	}
     	antsWithoutOrders.removeAll(hillAttackers);
 
+
     	
-    	// find enemies
-    	for (Tile enemy : ants.getEnemyAnts()) {
-    		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, enemy));
-    		for (Ant closest : antsWithoutOrders) {
-    			closest.setDestination(enemy);
-        		if (closest.move(orders)) {
-	    			antsWithoutOrders.remove(closest);
-	    			break;
-	    		}
-    		}
-    	}
+//    	// find enemies
+//    	for (Tile enemy : ants.getEnemyAnts()) {
+//    		Collections.sort(antsWithoutOrders, Ant.distanceComparator(ants, enemy));
+//    		for (Ant closest : antsWithoutOrders) {
+//    			closest.setDestination(enemy);
+//        		if (closest.move(orders)) {
+//	    			antsWithoutOrders.remove(closest);
+//	    			break;
+//	    		}
+//    		}
+//    	}
     
     	
     	// if there was a destination set, then continue toward that destination
@@ -131,7 +124,8 @@ public class MyBot extends Bot {
     	
     	
         for (Ant ant : antsWithoutOrders) {
-        	ant.moveInPreferredDirection(orders);
+        	//ant.moveInPreferredDirection(orders);
+        	ant.moveToPreferredTile(orders);
         }
         
         //update the position of my ants
